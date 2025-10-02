@@ -1,0 +1,66 @@
+model SistemaComercioElectronico
+
+enum TipoDescuento {
+    porcentaje,
+    regalo_unidad
+}
+
+class Usuario
+    attributes
+        nick : String
+        clave : String
+end
+
+class Producto
+    attributes
+        tipo : String  -- "Libros", "Discos", "Muebles"
+        impuesto : Real
+        nombre : String -- "Moby Dick", "Transformer", "Mesa Sklum"
+        precio : Real
+        stock : Integer
+        descuento: TipoDescuento
+end
+
+class Carrito
+    attributes
+        fechaCompra : String
+end
+
+class OrdenCompra
+    attributes
+        cantidad : Integer
+end
+
+constraints
+
+--- 1. En cada orden de compra, las unidades pedidas no pueden ser negativas ---
+context OrdenCompra
+    inv unidadesNoNegativas: self.cantidad >= 0
+---2. Las unidades en stock de cada producto no pueden ser negativas ---
+context Producto
+    inv stockNoNegativo: self.stock >= 0
+
+--- 3. El precio de un producto debe ser positivo ---
+context Producto
+    inv precioPositivo: self.precio > 0
+
+--- 4. El porcentaje de impuestos de un tipo de producto no puede ser negativo ---
+context Producto
+    inv impuestoNoNegativo: self.impuesto >= 0
+
+--- 5. El porcentaje de descuento debe estar comprendido entre 0 y 100 (ambos excluidos) ---
+context Producto
+    inv descuentoValido: self.descuento > 0 and self.descuento < 100
+
+--- 6. En todo momento, en el sistema debe existir al menos un producto o un tipo de producto con descuento ---
+context Producto
+    inv alMenosUnDescuento: Producto.all.exists(p | p.descuento > 0) or
+        Producto.all.exists(p | p.tipo = self.tiposConDescuento->notEmpty())
+--- 7. Si un producto tiene un descuento, entonces su tipo de producto no puede tener el mismo tipo de descuento (pero su tipo puede no tener descuento) ---
+context Producto
+    inv tipoSinDescuento: self.descuento > 0 implies
+        Producto.all.exists(p | p.tipo = self.tipo and p.descuento = 0)
+--- 8. El número de unidades pedidas de cada producto de todos los usuarios activos en el sistema no puede superar el stock disponible del producto ---
+context Producto
+    inv unidadesPedidosNoSuperanStock: self.stock >=
+        OrdenCompra.all.select(oc | oc.producto = self).collect(oc | oc.cantidad)->sum()

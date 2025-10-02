@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<diagram_Layout version="13">
+    <diagramOptions>
+        <autolayout>false</autolayout>
+        <antialiasing>false</antialiasing>
+        <showassocnames>false</showassocnames>
+        <showattributes>true</showattributes>
+        <showmultiplicities>false</showmultiplicities>
+        <showoperations>false</showoperations>
+        <showrolenames>true</showrolenames>
+        <showgrid>false</showgrid>
+    </diagramOptions>
+    <node id="OrdenCompra" sizeCalculated="true" type="Class">
+        <name>OrdenCompra</name>
+        <strategy type="org.tzi.use.gui.views.diagrams.elements.positioning.StrategyFixed">
+            <x>113.0</x>
+            <y>247.0</y>
+        </strategy>
+        <hidden>false</hidden>
+    </node>
+    <node id="Usuario" sizeCalculated="true" type="Class">
+        <name>Usuario</name>
+        <strategy type="org.tzi.use.gui.views.diagrams.elements.positioning.StrategyFixed">
+            <x>33.0</x>
+            <y>100.0</y>
+        </strategy>
+        <hidden>false</hidden>
+    </node>
+    <node id="Carrito" sizeCalculated="true" type="Class">
+        <name>Carrito</name>
+        <strategy type="org.tzi.use.gui.views.diagrams.elements.positioning.StrategyFixed">
+            <x>160.0</x>
+            <y>41.0</y>
+        </strategy>
+        <hidden>false</hidden>
+    </node>
+    <node id="Producto" sizeCalculated="true" type="Class">
+        <name>Producto</name>
+        <strategy type="org.tzi.use.gui.views.diagrams.elements.positioning.StrategyFixed">
+            <x>314.0</x>
+            <y>84.0</y>
+        </strategy>
+        <hidden>false</hidden>
+    </node>
+    <node id="TipoDescuento" sizeCalculated="true" type="Enumeration">
+        <name>TipoDescuento</name>
+        <strategy type="org.tzi.use.gui.views.diagrams.elements.positioning.StrategyFixed">
+            <x>179.0</x>
+            <y>121.0</y>
+        </strategy>
+        <hidden>false</hidden>
+    </node>
+</diagram_Layout>
