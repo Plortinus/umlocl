@@ -1,0 +1,172 @@
+model SistemaComercioElectronico
+
+enum TipoDescuento {
+    porcentaje,
+    regalo_unidad
+}
+
+class Usuario
+    attributes
+        nick : String
+        clave : String
+    operations
+        comprar()
+end
+
+class Producto
+    attributes
+        tipo : String  -- "Libros", "Discos", "Muebles"
+        impuesto : Real
+        nombre : String -- "Moby Dick", "Transformer", "Mesa Sklum"
+        precio : Real
+        stock : Integer
+    operations
+        calcularImpuesto(precio : Real) : Real
+end
+
+class Carrito
+    attributes
+        fechaCompra : String
+    operations
+        agregarOrden(producto : Producto, cantidad : Integer)
+        calcularTotal() : Real
+end
+
+class OrdenCompra
+    attributes
+        cantidad : Integer
+    operations
+        calcularSubtotal() : Real
+end
+
+class Descuento
+    attributes
+        descripcion : String
+        tipo : TipoDescuento
+        porcentaje : Real -- Solo para tipo 'porcentaje' (0-100, excluidos)
+        unidadesParaRegalo : Integer -- Solo para tipo 'regalo_unidad' (>=2)
+    operations
+        aplicarDescuento(precio : Real, cantidad : Integer) : Real
+end
+
+-- ===============================================
+-- ASOCIACIONES
+-- ===============================================
+
+-- Usuario puede tener múltiples carritos
+association UsuarioCarrito between
+    Usuario[1] role propietario
+    Carrito[*] role carritos
+end
+
+-- Producto puede tener múltiples productos
+association TipoProductoProducto between
+    Producto[1] role tipo
+    Producto[*] role productos
+end
+
+-- Carrito contiene múltiples órdenes
+association CarritoOrden between
+    Carrito[1] role carrito
+    OrdenCompra[1..*] role ordenes
+end
+
+-- OrdenCompra se refiere a un producto específico
+association OrdenProducto between
+    Producto[1] role producto
+    OrdenCompra[*] role ordenes
+end
+
+-- Producto puede tener un descuento (opcional)
+association TipoProductoDescuento between
+    Producto[1] role tipoConDescuento
+    Descuento[0..1] role descuentoTipo
+end
+
+-- Producto puede tener un descuento (opcional)
+association ProductoDescuento between
+    Producto[1] role productoConDescuento
+    Descuento[0..1] role descuentoProducto
+end
+
+-- ===============================================
+-- RESTRICCIONES OCL
+-- ===============================================
+
+constraints
+
+-- Restricción 1: Las unidades pedidas no pueden ser negativas
+context OrdenCompra
+    inv unidadesNoNegativas: 
+        self.cantidad >= 0
+
+-- Restricción 2: Las unidades en stock no pueden ser negativas
+context Producto
+    inv stockNoNegativo: 
+        self.stock >= 0
+
+-- Restricción 3: El precio de un producto debe ser positivo
+context Producto
+    inv precioPositivo: 
+        self.precio > 0
+
+-- Restricción 4: El porcentaje de impuestos no puede ser negativo
+context Producto
+    inv impuestoNoNegativo: 
+        self.impuesto >= 0
+
+-- Restricción 5: El porcentaje de descuento debe estar entre 0 y 100 (excluidos)
+context Descuento
+    inv porcentajeValido: 
+        self.tipo = TipoDescuento::porcentaje implies 
+        (self.porcentaje > 0 and self.porcentaje < 100)
+
+-- Restricción 6: Debe existir al menos un producto o tipo de producto con descuento
+context Descuento
+    inv alMenosUnDescuento: 
+        Descuento.allInstances()->size() >= 1 and
+        (Producto.allInstances()->exists(t | t.descuentoTipo->size() > 0) or
+         Producto.allInstances()->exists(p | p.descuentoProducto->size() > 0))
+
+-- Restricción 7: Si un producto tiene descuento, su tipo no puede tener el mismo tipo de descuento
+context Producto
+    inv noMismoTipoDescuento: 
+        self.descuentoProducto->size() > 0 and self.tipo.descuentoTipo->size() > 0 implies
+        self.descuentoProducto.tipo <> self.tipo.descuentoTipo.tipo
+
+-- Restricción 8: Las unidades pedidas no pueden superar el stock disponible
+context Producto
+    inv stockSuficiente: 
+        self.ordenes->collect(cantidad)->sum() <= self.stock
+
+-- Restricciones adicionales para la lógica del negocio
+
+-- Los carritos deben tener al menos una orden
+context Carrito
+    inv alMenosUnaOrden: 
+        self.ordenes->size() >= 1
+
+-- Para descuentos de tipo regalo, debe especificar unidades para regalo >= 2
+context Descuento
+    inv unidadesRegaloValidas: 
+        self.tipo = TipoDescuento::regalo_unidad implies 
+        self.unidadesParaRegalo >= 2
+
+-- Los usuarios deben tener nick y clave no vacíos
+context Usuario
+    inv datosUsuarioValidos: 
+        self.nick.size() > 0 and self.clave.size() > 0
+
+-- Los nombres de productos y tipos no pueden estar vacíos
+context Producto
+    inv nombreProductoNoVacio: 
+        self.nombre.size() > 0
+
+context Producto
+    inv nombreTipoNoVacio: 
+        self.nombre.size() > 0
+
+-- Los descuentos deben tener descripción
+context Descuento
+    inv descripcionNoVacia: 
+        self.descripcion.size() > 0

@@ -1,0 +1,152 @@
+-- ===============================================
+-- EJEMPLOS DE OBJETOS PARA VALIDAR RESTRICCIONES
+-- ===============================================
+
+-- Crear tipos de producto
+!create tipoLibro : TipoProducto
+!set tipoLibro.nombre := 'Libros'
+!set tipoLibro.impuesto := 10.0
+
+!create tipoDiscos : TipoProducto
+!set tipoDiscos.nombre := 'Discos'
+!set tipoDiscos.impuesto := 15.0
+
+!create tipoMuebles : TipoProducto
+!set tipoMuebles.nombre := 'Muebles'
+!set tipoMuebles.impuesto := 21.0
+
+-- Crear descuentos
+!create descuento1 : Descuento
+!set descuento1.descripcion := 'Descuento 20% en libros'
+!set descuento1.tipo := TipoDescuento::porcentaje
+!set descuento1.porcentaje := 20.0
+
+!create descuento2 : Descuento
+!set descuento2.descripcion := 'Regalo una unidad por cada 3 discos'
+!set descuento2.tipo := TipoDescuento::regalo_unidad
+!set descuento2.unidadesParaRegalo := 3
+
+!create descuento3 : Descuento
+!set descuento3.descripcion := 'Descuento 15% en productos específicos'
+!set descuento3.tipo := TipoDescuento::porcentaje
+!set descuento3.porcentaje := 15.0
+
+-- Asociar descuentos a tipos de producto
+!insert (tipoLibro, descuento1) into TipoProductoDescuento
+
+-- Crear productos
+!create libro1 : Producto
+!set libro1.nombre := 'Moby Dick'
+!set libro1.precio := 25.99
+!set libro1.stock := 50
+
+!create disco1 : Producto
+!set disco1.nombre := 'Transformer'
+!set disco1.precio := 18.50
+!set disco1.stock := 30
+
+!create mesa1 : Producto
+!set mesa1.nombre := 'Mesa Sklum'
+!set mesa1.precio := 129.99
+!set mesa1.stock := 10
+
+-- Asociar productos con tipos
+!insert (tipoLibro, libro1) into TipoProductoProducto
+!insert (tipoDiscos, disco1) into TipoProductoProducto
+!insert (tipoMuebles, mesa1) into TipoProductoProducto
+
+-- Asociar descuento a producto específico (diferente tipo que su TipoProducto)
+!insert (disco1, descuento3) into ProductoDescuento
+
+-- Crear usuarios
+!create usuario1 : Usuario
+!set usuario1.nick := 'juan123'
+!set usuario1.clave := 'password123'
+
+!create usuario2 : Usuario
+!set usuario2.nick := 'maria456'
+!set usuario2.clave := 'secreto456'
+
+-- Crear carritos de compra
+!create carrito1 : CarritoCompra
+!set carrito1.fechaCompra := '2025-10-01'
+
+!create carrito2 : CarritoCompra
+!set carrito2.fechaCompra := '2025-10-02'
+
+-- Asociar carritos con usuarios
+!insert (usuario1, carrito1) into UsuarioCarrito
+!insert (usuario2, carrito2) into UsuarioCarrito
+
+-- Crear órdenes de compra
+!create orden1 : OrdenCompra
+!set orden1.cantidad := 2
+
+!create orden2 : OrdenCompra
+!set orden2.cantidad := 1
+
+!create orden3 : OrdenCompra
+!set orden3.cantidad := 3
+
+-- Asociar órdenes con carritos
+!insert (carrito1, orden1) into CarritoOrden
+!insert (carrito1, orden2) into CarritoOrden
+!insert (carrito2, orden3) into CarritoOrden
+
+-- Asociar órdenes con productos
+!insert (libro1, orden1) into OrdenProducto
+!insert (mesa1, orden2) into OrdenProducto
+!insert (disco1, orden3) into OrdenProducto
+
+-- ===============================================
+-- VALIDACIÓN DE RESTRICCIONES
+-- ===============================================
+
+-- Verificar restricción 1: Unidades no negativas
+?orden1.cantidad >= 0
+?orden2.cantidad >= 0
+?orden3.cantidad >= 0
+
+-- Verificar restricción 2: Stock no negativo
+?libro1.stock >= 0
+?disco1.stock >= 0
+?mesa1.stock >= 0
+
+-- Verificar restricción 3: Precio positivo
+?libro1.precio > 0
+?disco1.precio > 0
+?mesa1.precio > 0
+
+-- Verificar restricción 4: Impuesto no negativo
+?tipoLibro.impuesto >= 0
+?tipoDiscos.impuesto >= 0
+?tipoMuebles.impuesto >= 0
+
+-- Verificar restricción 5: Porcentaje de descuento válido
+?descuento1.porcentaje > 0 and descuento1.porcentaje < 100
+?descuento3.porcentaje > 0 and descuento3.porcentaje < 100
+
+-- Verificar restricción 6: Al menos un descuento existe
+?Descuento.allInstances()->size() >= 1
+
+-- Verificar restricción 8: Stock suficiente
+?libro1.ordenes->collect(cantidad)->sum() <= libro1.stock
+?disco1.ordenes->collect(cantidad)->sum() <= disco1.stock
+?mesa1.ordenes->collect(cantidad)->sum() <= mesa1.stock
+
+-- ===============================================
+-- EJEMPLO QUE VIOLA RESTRICCIONES (PARA PROBAR)
+-- ===============================================
+
+-- Descomentar para probar violación de restricción 1
+-- !create ordenMala : OrdenCompra
+-- !set ordenMala.cantidad := -5
+
+-- Descomentar para probar violación de restricción 3
+-- !create productoMalo : Producto
+-- !set productoMalo.precio := -10.0
+
+-- Descomentar para probar violación de restricción 5
+-- !create descuentoMalo : Descuento
+-- !set descuentoMalo.tipo := TipoDescuento::porcentaje
+-- !set descuentoMalo.porcentaje := 150.0
