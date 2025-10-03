@@ -1,0 +1,125 @@
+-- Modelo de comercio electrónico con restricciones OCL
+model Ecommerce
+
+enum DiscountType { percentage, gift }
+
+class User
+  attributes
+    nickname : String
+    password : String
+    active   : Boolean
+end
+
+class ProductType
+  attributes
+    name        : String
+    taxPercent  : Real
+end
+
+class Product
+  attributes
+    name   : String
+    price  : Real
+    stock  : Integer
+end
+
+class ShoppingCart
+  attributes
+    purchaseDate : String
+end
+
+class Order
+  attributes
+    quantity : Integer
+end
+
+class Discount
+  attributes
+    description      : String
+    type             : DiscountType
+    percent          : Real
+    giftTriggerUnits : Integer
+end
+
+class ECommerce
+end
+
+-- Asociaciones principales
+association BelongsToType between
+  Product[0..*] role products
+  ProductType[1] role productType
+end
+
+association OwnsCart between
+  User[1] role owner
+  ShoppingCart[0..*] role carts
+end
+
+association IncludesOrder between
+  ShoppingCart[1] role cart
+  Order[1..*] role orders
+end
+
+association OrderProduct between
+  Order[0..*] role orders
+  Product[1] role product
+end
+
+-- Descuentos aplicados a tipos de producto o a productos concretos
+association TypeDiscount between
+  ProductType[0..*] role productType
+  Discount[0..1] role typeDiscount
+end
+
+association ProductDiscount between
+  Product[0..*] role product
+  Discount[0..1] role productDiscount
+end
+
+-- Restricciones OCL
+constraints
+  -- 1. En cada orden de compra, las unidades pedidas no pueden ser negativas
+  context o:Order inv UnitsNonNegative:
+    o.quantity >= 0
+
+  -- 2. Las unidades en stock de cada producto no pueden ser negativas
+  context p:Product inv StockNonNegative:
+    p.stock >= 0
+
+  -- 3. El precio de un producto debe ser positivo
+  context p:Product inv PricePositive:
+    p.price > 0
+
+  -- 4. El porcentaje de impuestos de un tipo de producto no puede ser negativo
+  context pt:ProductType inv TaxNonNegative:
+    pt.taxPercent >= 0
+
+  -- 5. El porcentaje de descuento debe estar entre 0 y 100 (excluidos)
+  context d:Discount inv PercentBetween0and100:
+    d.type = DiscountType::percentage implies (d.percent > 0 and d.percent < 100)
+
+  -- Regla adicional: en el descuento por regalo, el umbral debe ser 2 o más
+  context d:Discount inv GiftTriggerAtLeastTwo:
+    d.type = DiscountType::gift implies (d.giftTriggerUnits >= 2)
+
+  -- 6. Debe existir al menos un producto o un tipo de producto con descuento
+  context ECommerce inv AtLeastOneDiscounted:
+    ProductType.allInstances->exists(pt | pt.typeDiscount.isDefined()) or
+    Product.allInstances->exists(p | p.productDiscount.isDefined())
+
+  -- 7. Si un producto tiene descuento, su tipo no puede tener el mismo tipo de descuento
+  context p:Product inv ProductTypeDifferentDiscountKind:
+    p.productDiscount.isDefined() implies (
+      (not p.productType.typeDiscount.isDefined()) or
+      p.productType.typeDiscount.type <> p.productDiscount.type
+    )
+
+  -- (opcional) cada descuento debe estar vinculado exactamente a un producto o a un tipo
+  context d:Discount inv DiscountAttachedToExactlyOne:
+    d.productType->size() + d.product->size() = 1
+
+  -- 8. Suma de unidades pedidas por usuarios activos no supera el stock disponible
+  context p:Product inv ActiveOrdersDoNotExceedStock:
+    p.stock >=
+      p.orders->select(o | o.cart.owner.active)
+              ->collect(o | o.quantity)->sum()

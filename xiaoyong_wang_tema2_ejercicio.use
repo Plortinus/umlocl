@@ -18,7 +18,12 @@ class Producto
         nombre : String -- "Moby Dick", "Transformer", "Mesa Sklum"
         precio : Real
         stock : Integer
-        descuento: TipoDescuento
+end
+
+class Descuento
+    attributes
+        tipo : TipoDescuento
+        valor : Real  -- porcentaje (0-100) o unidades de regalo
 end
 
 class Carrito
@@ -31,12 +36,37 @@ class OrdenCompra
         cantidad : Integer
 end
 
+-- ============ ASOCIACIONES ============
+
+association UsuarioCarrito between
+    Usuario[1] role usuario
+    Carrito[*] role carritos
+end
+
+association CarritoOrden between
+    Carrito[1] role carrito
+    OrdenCompra[1..*] role ordenes
+end
+
+association OrdenProducto between
+    OrdenCompra[*] role ordenes
+    Producto[1] role producto
+end
+
+association ProductoDescuento between
+    Producto[*] role productos
+    Descuento[0..1] role descuento
+end
+
+-- ============ RESTRICCIONES OCL ============
+
 constraints
 
 --- 1. En cada orden de compra, las unidades pedidas no pueden ser negativas ---
 context OrdenCompra
     inv unidadesNoNegativas: self.cantidad >= 0
----2. Las unidades en stock de cada producto no pueden ser negativas ---
+
+--- 2. Las unidades en stock de cada producto no pueden ser negativas ---
 context Producto
     inv stockNoNegativo: self.stock >= 0
 
@@ -49,18 +79,23 @@ context Producto
     inv impuestoNoNegativo: self.impuesto >= 0
 
 --- 5. El porcentaje de descuento debe estar comprendido entre 0 y 100 (ambos excluidos) ---
-context Producto
-    inv descuentoValido: self.descuento > 0 and self.descuento < 100
+context Descuento
+    inv descuentoValido: 
+        self.tipo = TipoDescuento::porcentaje implies (self.valor > 0 and self.valor < 100)
 
---- 6. En todo momento, en el sistema debe existir al menos un producto o un tipo de producto con descuento ---
+--- 6. En todo momento, en el sistema debe existir al menos un producto con descuento ---
 context Producto
-    inv alMenosUnDescuento: Producto.all.exists(p | p.descuento > 0) or
-        Producto.all.exists(p | p.tipo = self.tiposConDescuento->notEmpty())
---- 7. Si un producto tiene un descuento, entonces su tipo de producto no puede tener el mismo tipo de descuento (pero su tipo puede no tener descuento) ---
+    inv alMenosUnDescuento: 
+        Producto.allInstances()->exists(p | p.descuento.isDefined())
+
+--- 7. Si un producto tiene un descuento, entonces su tipo de producto no puede tener el mismo tipo de descuento ---
 context Producto
-    inv tipoSinDescuento: self.descuento > 0 implies
-        Producto.all.exists(p | p.tipo = self.tipo and p.descuento = 0)
---- 8. El número de unidades pedidas de cada producto de todos los usuarios activos en el sistema no puede superar el stock disponible del producto ---
+    inv tipoSinDescuentoDuplicado: 
+        self.descuento.isDefined() implies
+        Producto.allInstances()->select(p | p.tipo = self.tipo and p <> self)
+            ->forAll(p | p.descuento.oclIsUndefined() or p.descuento.tipo <> self.descuento.tipo)
+
+--- 8. El número de unidades pedidas de cada producto no puede superar el stock disponible ---
 context Producto
-    inv unidadesPedidosNoSuperanStock: self.stock >=
-        OrdenCompra.all.select(oc | oc.producto = self).collect(oc | oc.cantidad)->sum()
+    inv unidadesPedidosNoSuperanStock: 
+        self.stock >= self.ordenes->collect(cantidad)->sum()

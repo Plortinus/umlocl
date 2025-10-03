@@ -1,0 +1,33 @@
+-- Crear usuario
+!create usuario1 : Usuario
+!usuario1.nick := 'juan123'
+!usuario1.clave := 'password123'
+
+-- Crear producto
+!create libro1 : Producto
+!libro1.tipo := 'Libros'
+!libro1.nombre := 'Moby Dick'
+!libro1.precio := 25.99
+!libro1.stock := 50
+!libro1.impuesto := 10.0
+
+-- Crear descuento
+!create descuento1 : Descuento
+!descuento1.tipo := TipoDescuento::porcentaje
+!descuento1.valor := 20.0
+
+-- Asociaciones
+!insert (libro1, descuento1) into ProductoDescuento
+
+-- Crear carrito y orden
+!create carrito1 : Carrito
+!carrito1.fechaCompra := '2025-10-01'
+
+!create orden1 : OrdenCompra
+!orden1.cantidad := 2
+
+!insert (usuario1, carrito1) into UsuarioCarrito
+!insert (carrito1, orden1) into CarritoOrden
+!insert (orden1, libro1) into OrdenProducto
+
+check
